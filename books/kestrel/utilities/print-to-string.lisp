@@ -8,41 +8,71 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; This book puts fms-to-string and the related utilities into guard-verified
+; :logic mode. The guards being verified are declared in the ACL2 sources
+; (basis-a.lisp, basis-b.lisp, other-events.lisp).
+
 (in-package "ACL2")
 
-(local (in-theory (disable w table-alist get-global eviscerate-top-state-p
+(local (include-book "system/fmt-support" :dir :system))
+
+
+(local (in-theory (disable eviscerate-top-state-p
                            standard-evisc-tuplep fmt-state-p error1-state-p open-output-channel-p1
                            fmt1!
                            fmt1
                            fmt0
                            fmt-abbrev1
-                           ;chk-current-package
                            error1
-                           ;set-current-package
                            error-fms
                            add-pair
                            error-fms-channel
                            princ$
                            )))
 
-(verify-termination chk-current-package)
-;(verify-guards chk-current-package :otf-flg t) ;todo
-(in-theory (disable chk-current-package))
-(verify-termination set-current-package)
-;(verify-guards set-current-package :hints (("Goal" :in-theory (enable chk-current-package error1))))
-(verify-termination set-current-package-state)
-;(verify-guards set-current-package-state :hints (("Goal" :in-theory (enable chk-current-package error1 error-fms))))
+; -------------------
+; Supporting functions.
+
 (verify-termination set-ppr-flat-right-margin)
-;(verify-guards set-ppr-flat-right-margin)
+
+(verify-termination chk-current-package)
+
+(local
+ (defthm car-of-error1
+   (equal (car (error1 ctx summary str alist state)) t)
+   :hints (("Goal" :in-theory (enable error1)))))
+
+(verify-termination set-current-package)
+
+(verify-termination set-current-package-state)
+
 (verify-termination set-iprint-ar)
-;(verify-guards set-iprint-ar) ;todo
-(verify-termination block-iprint-ar)
-;(verify-guards block-iprint-ar) ;todo
+
+(verify-termination block-iprint-ar
+  (declare (xargs :guard-hints (("Goal" :in-theory (disable boundp-global
+                                                            get-global))))))
+
 (verify-termination override-global-evisc-table)
-;(verify-guards override-global-evisc-table) ; todo: needs a guard
-;(verify-guards set-ppr-flat-right-margin) ; todo: needs a aguard
-(set-verify-guards-eagerness 0) ; todo
+
+(verify-termination fmt-control-alistp)
+
+; -------------------
+; The -to-string wrappers.
+
+(verify-termination fms-to-string-fn)
+
+(verify-termination fms!-to-string-fn)
+
+(verify-termination fmt-to-string-fn)
+
+(verify-termination fmt!-to-string-fn)
+
 (verify-termination fmt1-to-string-fn)
+
+(verify-termination fmt1!-to-string-fn)
+
+; -------------------
+; Print an item to a string.
 
 ;; todo: make this lowercase?
 ;; todo: verify guards
@@ -54,4 +84,3 @@
                       (fmt-hard-right-margin . 10000)))
     (declare (ignore col))
     string))
-

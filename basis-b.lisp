@@ -3298,6 +3298,8 @@
               (set-state-ok nil)))))
 
 (defun chk-current-package (val ctx state)
+  (declare (xargs :guard (and (state-p state)
+                              (error1-state-p state))))
   (cond ((find-non-hidden-package-entry val (known-package-alist state))
          (value nil))
         (t (er soft ctx *ld-special-error* 'current-package val))))
@@ -3307,6 +3309,8 @@
 ; This function is equivalent to in-package-fn except for the
 ; error message generated.
 
+  (declare (xargs :guard (and (state-p state)
+                              (error1-state-p state))))
   (er-progn
    (chk-current-package val 'set-current-package state)
    (pprogn
@@ -3336,7 +3340,17 @@
       ',name
       (,name ,@args))))
 
-(defun-for-state set-current-package (val state))
+; Formerly (defun-for-state set-current-package (val state)). Defined
+; explicitly so it can carry a guard. Runtime behavior is unchanged.
+(defun set-current-package-state (val state)
+  (declare (xargs :guard (and (state-p state)
+                              (error1-state-p state))))
+  (mv-let (erp v state)
+    (set-current-package val state)
+    (declare (ignore v))
+    (prog2$ (and erp (er hard? 'set-current-package
+                         "An error message may have been printed above."))
+            state)))
 
 (defun standard-oi (state)
   (f-get-global 'standard-oi state))

@@ -2372,7 +2372,9 @@
          (cdr pair))))
 
 (defun set-ppr-flat-right-margin (val state)
-  (if (posp val)
+  (declare (xargs :guard (and (state-p state)
+                              (posp val))))
+  (if (mbt (posp val))
       (f-put-global 'ppr-flat-right-margin val state)
     (prog2$ (illegal 'set-ppr-flat-right-margin
                      "Set-ppr-flat-right-margin takes a positive integer ~

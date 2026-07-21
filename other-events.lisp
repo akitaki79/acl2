@@ -32961,6 +32961,8 @@
 ; This function, which is untouchable, assumes that iprint-ar is well-formed.
 ; It is used when restoring a valid iprint-ar.
 
+  (declare (xargs :guard (and (array1p 'iprint-ar iprint-ar)
+                              (state-p state))))
   (f-put-global 'iprint-ar (compress1 'iprint-ar iprint-ar) state))
 
 (defun override-global-evisc-table (evisc-tuple state)
@@ -32968,6 +32970,9 @@
 ; This function expands evisc-tuple as necessary so that entries in the global
 ; evisc-table will be ignored when printing with evisceration.
 
+  (declare (xargs :guard (and (state-p state)
+                              (standard-evisc-tuplep evisc-tuple)
+                              (alistp (table-alist 'evisc-table (w state))))))
   (let ((evisc-table (table-alist 'evisc-table (w state))))
     (cond ((null evisc-table) ; optimization
            evisc-tuple)
@@ -32993,6 +32998,16 @@
 
 ; See comments in the related function, disable-iprint-ar.
 
+  (declare (xargs :guard
+                  (and (state-p state)
+                       (f-boundp-global 'iprint-ar state)
+                       (array1p 'iprint-ar (f-get-global 'iprint-ar state))
+                       (let ((elt-0 (aref1 'iprint-ar
+                                           (f-get-global 'iprint-ar state)
+                                           0)))
+                         (or (integerp elt-0)
+                             (consp elt-0)
+                             (null elt-0))))))
   (let* ((iprint-ar (f-get-global 'iprint-ar state))
          (elt-0 (aref1 'iprint-ar iprint-ar 0)))
     (pprogn (f-put-global 'iprint-ar
@@ -33162,6 +33177,7 @@
                          '(value (er hard? 'channel-to-string
                                      "Implementation error: Unable to open a ~
                                       channel to a string.")))))))))
+
     `(with-local-state
       (mv-let
        (erp result state)
@@ -33173,14 +33189,40 @@
 (defconst *fmt-control-defaults-keys*
   (strip-cars *fmt-control-defaults*))
 
+(defun fmt-control-alistp (fmt-control-alist)
+
+; Recognizer for the fmt-control-alist arguments of fms-to-string and related
+; utilities. Similar to print-control-alistp in basis-a.lisp.
+
+  (declare (xargs :guard t))
+  (cond
+   ((atom fmt-control-alist) (null fmt-control-alist))
+   ((atom (car fmt-control-alist)) nil)
+   (t (and (let ((key (car (car fmt-control-alist)))
+                 (val (cdr (car fmt-control-alist))))
+             (case key
+               (print-base (print-base-p val))
+               (print-case (member-eq val '(:upcase :downcase)))
+               ((print-length print-level print-lines print-right-margin)
+                (or (null val) (natp val)))
+               ((fmt-hard-right-margin fmt-soft-right-margin)
+                (small-nat-guard val))
+               (ppr-flat-right-margin
+                (and (posp val) (small-nat-guard val)))
+               ((iprint-hard-bound iprint-soft-bound)
+                (natp val))
+               ((print-circle print-escape print-pretty print-radix
+                 print-readably write-for-read current-package)
+                t)
+               (otherwise nil)))
+           (fmt-control-alistp (cdr fmt-control-alist))))))
+
 (defun fms-to-string-fn (str alist evisc-tuple fmt-control-alist)
-  (declare (xargs :guard ; incomplete guard
+  (declare (xargs :guard
                   (and (stringp str)
                        (character-alistp alist)
                        (standard-evisc-tuplep evisc-tuple)
-                       (alistp fmt-control-alist)
-                       (alist-keys-subsetp fmt-control-alist
-                                           *fmt-control-defaults-keys*))))
+                       (fmt-control-alistp fmt-control-alist))))
   (channel-to-string
    (fms str alist chan-do-not-use-elsewhere state evisc-tuple)
    chan-do-not-use-elsewhere nil fmt-control-alist))
@@ -33189,13 +33231,11 @@
   `(fms-to-string-fn ,str ,alist ,evisc-tuple ,fmt-control-alist))
 
 (defun fms!-to-string-fn (str alist evisc-tuple fmt-control-alist)
-  (declare (xargs :guard ; incomplete guard
+  (declare (xargs :guard
                   (and (stringp str)
                        (character-alistp alist)
                        (standard-evisc-tuplep evisc-tuple)
-                       (alistp fmt-control-alist)
-                       (alist-keys-subsetp fmt-control-alist
-                                           *fmt-control-defaults-keys*))))
+                       (fmt-control-alistp fmt-control-alist))))
   (channel-to-string
    (fms! str alist chan-do-not-use-elsewhere state evisc-tuple)
    chan-do-not-use-elsewhere nil fmt-control-alist))
@@ -33204,13 +33244,11 @@
   `(fms!-to-string-fn ,str ,alist ,evisc-tuple ,fmt-control-alist))
 
 (defun fmt-to-string-fn (str alist evisc-tuple fmt-control-alist)
-  (declare (xargs :guard ; incomplete guard
+  (declare (xargs :guard
                   (and (stringp str)
                        (character-alistp alist)
                        (standard-evisc-tuplep evisc-tuple)
-                       (alistp fmt-control-alist)
-                       (alist-keys-subsetp fmt-control-alist
-                                           *fmt-control-defaults-keys*))))
+                       (fmt-control-alistp fmt-control-alist))))
   (channel-to-string
    (fmt str alist chan-do-not-use-elsewhere state evisc-tuple)
    chan-do-not-use-elsewhere col fmt-control-alist))
@@ -33219,13 +33257,11 @@
   `(fmt-to-string-fn ,str ,alist ,evisc-tuple ,fmt-control-alist))
 
 (defun fmt!-to-string-fn (str alist evisc-tuple fmt-control-alist)
-  (declare (xargs :guard ; incomplete guard
+  (declare (xargs :guard
                   (and (stringp str)
                        (character-alistp alist)
                        (standard-evisc-tuplep evisc-tuple)
-                       (alistp fmt-control-alist)
-                       (alist-keys-subsetp fmt-control-alist
-                                           *fmt-control-defaults-keys*))))
+                       (fmt-control-alistp fmt-control-alist))))
   (channel-to-string
    (fmt! str alist chan-do-not-use-elsewhere state evisc-tuple)
    chan-do-not-use-elsewhere col fmt-control-alist))
@@ -33234,13 +33270,11 @@
   `(fmt!-to-string-fn ,str ,alist ,evisc-tuple ,fmt-control-alist))
 
 (defun fmt1-to-string-fn (str alist col evisc-tuple fmt-control-alist)
-  (declare (xargs :guard ; incomplete guard
+  (declare (xargs :guard
                   (and (character-alistp alist)
                        (stringp str)
                        (standard-evisc-tuplep evisc-tuple)
-                       (alistp fmt-control-alist)
-                       (alist-keys-subsetp fmt-control-alist
-                                           *fmt-control-defaults-keys*)))
+                       (fmt-control-alistp fmt-control-alist)))
            (type #.*fixnat-type* col))
   (channel-to-string
    (fmt1 str alist col chan-do-not-use-elsewhere state evisc-tuple)
@@ -33250,13 +33284,11 @@
   `(fmt1-to-string-fn ,str ,alist ,col ,evisc-tuple ,fmt-control-alist))
 
 (defun fmt1!-to-string-fn (str alist col evisc-tuple fmt-control-alist)
-  (declare (xargs :guard ; incomplete guard
+  (declare (xargs :guard
                   (and (stringp str)
                        (character-alistp alist)
                        (standard-evisc-tuplep evisc-tuple)
-                       (alistp fmt-control-alist)
-                       (alist-keys-subsetp fmt-control-alist
-                                           *fmt-control-defaults-keys*)))
+                       (fmt-control-alistp fmt-control-alist)))
            (type #.*fixnat-type* col))
   (channel-to-string
    (fmt1! str alist col chan-do-not-use-elsewhere state evisc-tuple)
