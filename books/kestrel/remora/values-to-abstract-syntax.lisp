@@ -16,6 +16,7 @@
 
 (local (include-book "arithmetic-5/top" :dir :system))
 (local (include-book "kestrel/arithmetic-light/times" :dir :system))
+(local (include-book "kestrel/utilities/ordinals" :dir :system))
 (local (include-book "std/basic/fix" :dir :system))
 (local (include-book "std/basic/ifix" :dir :system))
 (local (include-book "std/basic/nfix" :dir :system))
@@ -137,14 +138,19 @@
        and we rebuild the (universal, product, or sum) type
        with the parameters and the resulting body.
        Since universal, product, and sum type values are unary,
-       they are rebuilt as unary universal, product, and sum types."))
+       they are rebuilt as unary universal, product, and sum types.
+       Function type values are unary as well,
+       so they are rebuilt as unary function types;
+       a nesting of function type values,
+       which is how a function with two or more inputs is represented,
+       is rebuilt as the corresponding nesting of unary function types."))
     (type-value-case
      tval
      :base (type-base tval.type)
      :array (make-type-array
              :elem (type-value-to-type tval.elem)
              :ispace (ispace-shape (shape-dims (dim-const-list tval.dims))))
-     :fun (make-type-fun :in (type-value-list-to-type-list tval.in)
+     :fun (make-type-fun :in (type-value-to-type tval.in)
                          :out (type-value-to-type tval.out))
      :forall (make-type-forall
               :param tval.param

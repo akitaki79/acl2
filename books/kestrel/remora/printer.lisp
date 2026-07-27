@@ -876,9 +876,14 @@
                                            (ispace-list-to-pdoc ty.ispaces)))))
       :fun (pdoc-prefix-form
             "->"
-            (pdoc-concat (pdoc-paren (type-list-to-pdoc ty.in))
+            (pdoc-concat (type-to-pdoc ty.in)
                          (pdoc-concat (pdoc-line)
                                       (type-to-pdoc ty.out))))
+      :funn (pdoc-prefix-form
+             "->"
+             (pdoc-concat (pdoc-paren (type-list-to-pdoc ty.in))
+                          (pdoc-concat (pdoc-line)
+                                       (type-to-pdoc ty.out))))
       :forall (pdoc-prefix-form
                "Forall"
                (pdoc-concat (pdoc-paren (type-var-to-pdoc ty.param))
